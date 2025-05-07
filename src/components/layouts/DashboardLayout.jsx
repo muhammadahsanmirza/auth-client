@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShell, Button, Group, Text, ThemeIcon, UnstyledButton } from '@mantine/core';
 import { FiHome, FiUser, FiSettings, FiLogOut, FiMenu } from 'react-icons/fi';
 import ThemeToggle from '../ThemeToggle';
-import { authAPI } from '../../services/api';
+import api from '../../services/api';
 import { showSuccessToast } from '../ui/Toast';
 import { logout } from '../../store/authSlice';
 import keycloakService from '../../services/keycloak';
@@ -25,7 +25,7 @@ const DashboardLayout = ({ children }) => {
         keycloakService.logout();
       } else {
         // Logout from custom auth
-        await authAPI.logout();
+        await api.logout();
         dispatch(logout());
         showSuccessToast('Logged out successfully');
         navigate('/login');

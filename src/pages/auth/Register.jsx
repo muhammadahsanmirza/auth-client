@@ -45,15 +45,6 @@ const Register = () => {
         </Title>
         <RegisterForm />
         
-        <div className="mt-4">
-          <Text align="center" size="sm" mb="md">Or register with</Text>
-          <AuthProviderButtons 
-            ssoButtonText="Register with Organization SSO"
-            googleButtonText="Register with Google"
-            onSSOAction={handleKeycloakRegister}
-            onGoogleAction={() => console.log('Google registration not implemented yet')}
-          />
-        </div>
       </Paper>
     </div>
   );

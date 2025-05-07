@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { TextInput, PasswordInput, Button, Text, Stack } from '@mantine/core';
 import { FiUser, FiMail, FiLock } from 'react-icons/fi';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { authAPI } from '../services/api';
+import api from '../services/api';
 import { showSuccessToast, showErrorToast } from './ui/Toast';
 import Loader, { LoaderVariant } from './ui/Loader';
 import AuthProviderButtons from './auth/AuthProviderButtons';
 import { NavLink } from 'react-router-dom';
+import { loginSuccess } from '../store/authSlice'; // Import the login action
 
 const schema = yup.object().shape({
   Name: yup
@@ -39,6 +41,8 @@ const RegisterForm = () => {
   const { darkMode } = useSelector((state) => state.theme);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   
   const { register, handleSubmit, formState: { errors }, setError, clearErrors, reset } = useForm({
     resolver: yupResolver(schema),
@@ -53,22 +57,71 @@ const RegisterForm = () => {
 
   const onSubmit = async (data) => {
     delete data.confirmPassword;
-    console.log('Form data:', data);
+    console.log('[REGISTER] Form data:', { ...data, password: '******' });
+    console.log('[REGISTER] API URL from env:', import.meta.env.VITE_API_URL);
     
     setApiError('');
     setLoading(true);
     try {
-        const res = await authAPI.signup(data);
-        console.log(res.data.message)
-        showSuccessToast(res.data.message || 'Registration successful!.');
+      console.log('[REGISTER] Sending registration request to:', '/auth/signup', data);
+      
+      // Try with direct axios call to see if that helps
+      const res = await api.post('/auth/signup', data);
+      
+      console.log('[REGISTER] Registration successful, response:', res);
+      console.log('[REGISTER] Response data:', res.data);
+      
+      showSuccessToast(res.data.message || 'Registration successful!');
+      
+      // Store user data in Redux store
+      if (res.data.data && res.data.data.user) {
+        // Set the auth token for future API calls
+        if (res.data.data.tokens && res.data.data.tokens.accessToken) {
+          api.setAuthToken(res.data.data.tokens.accessToken);
+        }
+        
+        // Dispatch login action to update Redux state
+        dispatch(loginSuccess({
+          user: res.data.data.user,
+          authProvider: 'local'
+        }));
+        
+        // Redirect to dashboard
+        console.log('[REGISTER] Redirecting to dashboard');
+        navigate('/dashboard');
+      }
       
       reset();
       
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Registration failed. Please try again.';
-      showErrorToast(errorMessage);
-      setApiError(errorMessage);
+      console.error('[REGISTER] Registration failed:', error);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('[REGISTER] Error response status:', error.response.status);
+        console.error('[REGISTER] Error response data:', error.response.data);
+        console.error('[REGISTER] Error response headers:', error.response.headers);
+        
+        // If there's a specific error message from the server, use it
+        if (error.response.data && error.response.data.message) {
+          showErrorToast(error.response.data.message);
+          setApiError(error.response.data.message);
+        } else {
+          showErrorToast('Registration failed. Please try again.');
+          setApiError('Registration failed. Please try again.');
+        }
+      } else if (error.request) {
+        console.error('[REGISTER] No response received:', error.request);
+        showErrorToast('No response from server. Please check your connection.');
+        setApiError('No response from server. Please check your connection.');
+      } else {
+        console.error('[REGISTER] Error setting up request:', error.message);
+        showErrorToast('Error setting up request: ' + error.message);
+        setApiError('Error setting up request: ' + error.message);
+      }
+      
       if (error.response?.data?.errors) {
+        console.error('[REGISTER] Field validation errors:', error.response.data.errors);
         const fieldErrors = error.response.data.errors;
         Object.keys(fieldErrors).forEach(field => {
           setError(field, { 
@@ -79,6 +132,7 @@ const RegisterForm = () => {
       }
     } finally {
       setLoading(false);
+      console.log('[REGISTER] Registration process completed');
     }
   };
 

@@ -11,31 +11,33 @@ const AuthProviderButtons = ({ onSSOAction, ssoButtonText = "Use Organization SS
   
   const handleSSOLogin = async () => {
     try {
+      console.log('[AUTH_BUTTONS] SSO login button clicked');
       // First check if keycloakService exists
       if (!keycloakService) {
-        console.error('Keycloak service is not available');
+        console.error('[AUTH_BUTTONS] Keycloak service is not available');
         showErrorToast('SSO service is not available. Please try again later.');
         return;
       }
       
-      console.log('Starting Keycloak initialization...');
+      console.log('[AUTH_BUTTONS] Starting Keycloak initialization...');
       
       // Initialize Keycloak if not already initialized
       const isAuthenticated = await keycloakService.init();
       
-      console.log('Keycloak initialization result:', isAuthenticated);
+      console.log('[AUTH_BUTTONS] Keycloak initialization result:', isAuthenticated);
       
       // If already authenticated, redirect to dashboard
       if (isAuthenticated) {
+        console.log('[AUTH_BUTTONS] User is already authenticated, redirecting to dashboard');
         window.location.href = `${window.location.origin}/dashboard`;
         return;
       }
       
       // Otherwise, proceed with login
-      console.log('Proceeding with Keycloak login...');
+      console.log('[AUTH_BUTTONS] User is not authenticated, proceeding with Keycloak login...');
       keycloakService.login();
     } catch (error) {
-      console.error('Error during SSO login:', error);
+      console.error('[AUTH_BUTTONS] Error during SSO login:', error);
       showErrorToast('Failed to connect to SSO service. Please try again later.');
     }
   };

@@ -7,13 +7,14 @@ import * as yup from 'yup';
 import { useSelector } from 'react-redux';
 import ThemeToggle from '../../components/ThemeToggle';
 import AuthProviderButtons from '../../components/auth/AuthProviderButtons';
-import { authAPI } from '../../services/api';
+import api from '../../services/api';  // Changed from authAPI import
 import { showSuccessToast, showErrorToast } from '../../components/ui/Toast';
 import Loader, { LoaderVariant } from '../../components/ui/Loader';
 import { NavLink } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
 import { loginStart, loginSuccess, loginFailure } from '../../store/authSlice';
 import { useNavigate } from 'react-router-dom';
+import keycloakService from '../../services/keycloak';  // Add this import for keycloak
 // Define validation schema with Yup
 const schema = yup.object().shape({
   email: yup
@@ -51,23 +52,46 @@ const Login = () => {
     setLoading(true);
     dispatch(loginStart());
     
+    console.log('[LOGIN] Starting login process with data:', { email: data.email, password: '******' });
+    console.log('[LOGIN] API URL from env:', import.meta.env.VITE_API_URL);
+    
     try {
+      console.log('[LOGIN] Sending login request to:', '/auth/login',data);
       // Make the API call
-      const response = await authAPI.login(data);
+      const response = await api.login(data);
       
-      // Store user data in Redux
-      dispatch(loginSuccess(response.data.user));
+      console.log('[LOGIN] Login successful, response:', response);
+      console.log('[LOGIN] User data:', response.data.data.user);
+      
+      // Store user data in Redux - Fix here to access the correct path
+      dispatch(loginSuccess(response.data.data.user));
       
       // Show success message
-      showSuccessToast(response.message || 'Login successful! Welcome back.');
+      showSuccessToast(response.data.message || 'Login successful! Welcome back.');
       
       // Redirect based on user role
-      const userRole = response.data.user.role;
+      const userRole = response.data.data.user.role;
+      console.log('[LOGIN] Redirecting user with role:', userRole);
       navigate('/dashboard');
       
     } catch (error) {
+      console.error('[LOGIN] Login failed:', error);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('[LOGIN] Error response status:', error.response.status);
+        console.error('[LOGIN] Error response data:', error.response.data);
+        console.error('[LOGIN] Error response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('[LOGIN] No response received:', error.request);
+      } else {
+        console.error('[LOGIN] Error setting up request:', error.message);
+      }
+      
       // Handle error
       const errorMessage = error.response?.data?.message || 'Login failed. Please check your credentials.';
+      console.error('[LOGIN] Error message:', errorMessage);
+      
       dispatch(loginFailure(errorMessage));
       showErrorToast(errorMessage);
       
@@ -76,6 +100,7 @@ const Login = () => {
     } finally {
       // Reset loading state
       setLoading(false);
+      console.log('[LOGIN] Login process completed');
     }
   };
 
